@@ -1,23 +1,33 @@
 const { Presensi } = require('../models');
+const { Op } = require("sequelize");
+
 
 exports.getDailyReport = async (req, res) => {
   try {
-    const today = new Date().toISOString().split('T')[0];
-    const records = await Presensi.findAll({
-      where: {
-        checkIn: {
-          [require('sequelize').Op.gte]: new Date(`${today}T00:00:00`),
-          [require('sequelize').Op.lt]: new Date(`${today}T23:59:59`)
-        }
-      }
-    });
+    const { nama, tanggalMulai, tanggalSelesai } = req.query;
+    let options = { where: {} };
+
+    if (nama) {
+      options.where.nama = { [Op.like]: `%${nama}%` };
+    }
+
+    if (tanggalMulai && tanggalSelesai) {
+      options.where.createdAt = {
+        [Op.between]: [new Date(tanggalMulai), new Date(tanggalSelesai)],
+      };
+    }
+
+    const records = await Presensi.findAll(options);
 
     res.json({
-      status: 'success',
-      reportDate: today,
-      data: records
+      reportDate: new Date().toLocaleDateString(),
+      data: records,
     });
   } catch (error) {
-    res.status(500).json({ status: 'error', message: error.message });
+    res.status(500).json({
+      message: "Gagal mengambil laporan",
+      error: error.message,
+    });
   }
 };
+
