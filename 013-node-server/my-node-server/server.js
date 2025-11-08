@@ -7,6 +7,7 @@ const PORT = 5000;
 // Impor router
 const presensiRoutes = require("./routes/presensi");
 const reportRoutes = require("./routes/reports");
+const authRoutes = require("./routes/auth");
 
 app.use(cors());
 app.use(express.json());
@@ -24,6 +25,7 @@ const ruteBuku = require("./routes/books");
 app.use("/api/books", ruteBuku);
 app.use("/api/presensi", presensiRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api/auth", authRoutes);
 
 app.use((req, res, next) => {
   res.status(404).json({
