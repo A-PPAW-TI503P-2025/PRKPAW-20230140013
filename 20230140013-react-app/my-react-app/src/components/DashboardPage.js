@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 function decodeJwt(token) {
@@ -16,7 +17,9 @@ function decodeJwt(token) {
 
 function DashboardPage() {
   const navigate = useNavigate();
-  const [user, setUser] = useState({ nama: '', role: '' });
+  const [user, setUser] = useState({ nama: '', role: '', email: '' });
+  const [todayAttendance, setTodayAttendance] = useState(null);
+  const [totalAttendance, setTotalAttendance] = useState(0);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -26,13 +29,40 @@ function DashboardPage() {
     }
     const payload = decodeJwt(token);
     if (payload) {
-      setUser({ nama: payload.nama || payload.name || '', role: payload.role || '' });
+      setUser({ nama: payload.nama || payload.name || '', role: payload.role || '', email: payload.email || '' });
     }
+
+    // Fetch today's attendance
+    const fetchTodayAttendance = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/presensi/today', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setTodayAttendance(response.data.data);
+      } catch (err) {
+        console.error('Error fetching today attendance:', err);
+      }
+    };
+
+    // Fetch total attendance
+    const fetchTotalAttendance = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/presensi/total', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setTotalAttendance(response.data.total);
+      } catch (err) {
+        console.error('Error fetching total attendance:', err);
+      }
+    };
+
+    fetchTodayAttendance();
+    fetchTotalAttendance();
   }, [navigate]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
-    navigate('/login');
+    navigate('/login', { replace: true });
   };
 
   return (
@@ -71,11 +101,13 @@ function DashboardPage() {
             <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="p-4 bg-gradient-to-r from-indigo-50 to-indigo-100 rounded-lg">
                 <div className="text-sm text-gray-500">Presensi Hari Ini</div>
-                <div className="mt-2 text-2xl font-bold text-indigo-700">--</div>
+                <div className="mt-2 text-2xl font-bold text-indigo-700">
+                  {todayAttendance ? (todayAttendance.checkOut ? '✓ Selesai' : '✓ Check-in') : '—'}
+                </div>
               </div>
               <div className="p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg">
                 <div className="text-sm text-gray-500">Total Kehadiran</div>
-                <div className="mt-2 text-2xl font-bold text-green-700">--</div>
+                <div className="mt-2 text-2xl font-bold text-green-700">{totalAttendance}</div>
               </div>
             </div>
 

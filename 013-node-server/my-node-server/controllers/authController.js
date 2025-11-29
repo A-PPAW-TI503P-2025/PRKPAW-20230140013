@@ -5,9 +5,11 @@ const JWT_SECRET = 'INI_ADALAH_KUNCI_RAHASIA_ANDA_YANG_SANGAT_AMAN';
 
 exports.register = async (req, res) => {
   try {
+    console.log('Register request body:', req.body);
     const { nama, email, password, role } = req.body;
 
     if (!nama || !email || !password) {
+      console.log('Validation failed: missing fields');
       return res.status(400).json({ message: "Nama, email, dan password harus diisi" });
     }
 
@@ -15,7 +17,8 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: "Role tidak valid. Harus 'mahasiswa' atau 'admin'." });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10); 
+    const hashedPassword = await bcrypt.hash(password, 10);
+    console.log('Creating user with:', { nama, email, role: role || 'mahasiswa' });
     const newUser = await User.create({
       nama,
       email,
@@ -29,6 +32,7 @@ exports.register = async (req, res) => {
     });
 
   } catch (error) {
+    console.error('Register error:', error);
     if (error.name === 'SequelizeUniqueConstraintError') {
       return res.status(400).json({ message: "Email sudah terdaftar." });
     }
@@ -54,6 +58,7 @@ exports.login = async (req, res) => {
     const payload = {
       id: user.id,
       nama: user.nama,
+      email: user.email,
       role: user.role 
     };
 

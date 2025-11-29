@@ -3,10 +3,13 @@ const router = express.Router();
 const presensiController = require('../controllers/presensiController');
 const { addUserData } = require('../middleware/permissionMiddleware');
 const { body, validationResult } = require('express-validator');
+
 router.use(addUserData);
 router.post('/check-in', presensiController.CheckIn);
 router.post('/check-out', presensiController.CheckOut);
-router.put("/:id",presensiController.updatePresensi);
+router.get('/today', presensiController.getTodayAttendance);
+router.get('/total', presensiController.getTotalAttendance);
+
 router.put(
   '/:id',
   [
