@@ -20,7 +20,8 @@ exports.getDailyReport = async (req, res) => {
         as: 'user',
         attributes: ['id', 'nama', 'email', 'role'],
         required: false
-      }]
+      }],
+      order: [['checkIn', 'DESC']]
     });
 
     // Filter berdasarkan nama jika ada
