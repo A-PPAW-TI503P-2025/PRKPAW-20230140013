@@ -1,12 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import React, { useState, useRef, useCallback } from 'react';
 import Webcam from 'react-webcam';
-import axios from 'axios';
 
 
 function AttendancePage() {
@@ -121,62 +119,111 @@ function AttendancePage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-100 p-4">
-            <div className="max-w-2xl mx-auto">
-                <div className="bg-white p-8 rounded-lg shadow-md">
-                    <h2 className="text-3xl font-bold mb-6 text-gray-800 text-center">
+        <div className="min-h-screen bg-gray-100 p-4 flex items-center justify-center">
+            {/* Ubah max-w-2xl jadi max-w-5xl agar lebih lebar untuk layout berdampingan */}
+            <div className="max-w-5xl w-full mx-auto">
+                <div className="bg-white p-6 rounded-lg shadow-md">
+                    <h2 className="text-2xl font-bold mb-4 text-gray-800 text-center">
                         Lakukan Presensi
                     </h2>
 
-                    {coords && (
-                        <div className="my-6 border rounded-lg overflow-hidden">
-                            <div className="bg-blue-50 p-3 border-b border-blue-200 flex justify-between items-center">
-                                <div className="text-sm text-gray-700">
-                                    <p><strong>Latitude:</strong> {coords.lat.toFixed(6)}</p>
-                                    <p><strong>Longitude:</strong> {coords.lng.toFixed(6)}</p>
-                                    {coords.accuracy && <p className="text-xs text-gray-600"><strong>Akurasi:</strong> ±{coords.accuracy.toFixed(1)}m</p>}
+                    {/* Grid Layout: Peta di Kiri, Kamera di Kanan (pada layar besar) */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                        
+                        {/* --- KOLOM KIRI: PETA --- */}
+                        <div>
+                            {coords ? (
+                                <div className="border rounded-lg overflow-hidden h-full flex flex-col">
+                                    <div className="bg-blue-50 p-2 border-b border-blue-200 flex justify-between items-center text-xs">
+                                        <div className="truncate pr-2">
+                                            <span className="font-bold">Lat:</span> {coords.lat.toFixed(5)}, <span className="font-bold">Lng:</span> {coords.lng.toFixed(5)}
+                                        </div>
+                                        <button
+                                            onClick={getLocation}
+                                            className="px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs shrink-0"
+                                        >
+                                            Refresh
+                                        </button>
+                                    </div>
+                                    <MapContainer
+                                        ref={mapRef}
+                                        center={[coords.lat, coords.lng]}
+                                        zoom={17}
+                                        style={{ height: '250px', width: '100%' }} // Tinggi dikecilkan jadi 250px
+                                        key={`${coords.lat}-${coords.lng}`}
+                                    >
+                                        <TileLayer
+                                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                            attribution='&copy; Osm'
+                                        />
+                                        <Marker position={[coords.lat, coords.lng]} icon={pinpointIcon}>
+                                            <Popup>Lokasi Presensi Anda</Popup>
+                                        </Marker>
+                                    </MapContainer>
                                 </div>
-                                <button
-                                    onClick={getLocation}
-                                    className="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 font-semibold"
-                                >
-                                    Refresh Lokasi
-                                </button>
+                            ) : (
+                                <div className="h-[250px] flex items-center justify-center bg-gray-100 rounded-lg text-gray-500 border">
+                                    <p>Sedang memuat lokasi...</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* --- KOLOM KANAN: KAMERA --- */}
+                        <div className="flex flex-col">
+                            {/* Container kamera dipaksa tingginya sama dengan map (250px) */}
+                            <div className="border rounded-lg overflow-hidden bg-black mb-2 h-[250px] flex items-center justify-center relative">
+                                {image ? (
+                                    <img src={image} alt="Selfie" className="h-full w-full object-cover" />
+                                ) : (
+                                    <Webcam
+                                        audio={false}
+                                        ref={webcamRef}
+                                        screenshotFormat="image/jpeg"
+                                        className="h-full w-full object-cover" // Object cover agar full container
+                                    />
+                                )}
                             </div>
-                            <MapContainer
-                                ref={mapRef}
-                                center={[coords.lat, coords.lng]}
-                                zoom={17}
-                                style={{ height: '400px', width: '100%' }}
-                                key={`${coords.lat}-${coords.lng}`}
-                            >
-                                <TileLayer
-                                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                    attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
-                                />
-                                <Marker position={[coords.lat, coords.lng]} icon={pinpointIcon}>
-                                    <Popup>Lokasi Presensi Anda</Popup>
-                                </Marker>
-                            </MapContainer>
+
+                            {!image ? (
+                                <button
+                                    onClick={capture}
+                                    className="bg-blue-500 text-white px-4 py-2 rounded w-full hover:bg-blue-600 transition text-sm font-semibold"
+                                >
+                                    Ambil Foto 📸
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => setImage(null)}
+                                    className="bg-gray-500 text-white px-4 py-2 rounded w-full hover:bg-gray-600 transition text-sm font-semibold"
+                                >
+                                    Foto Ulang 🔄
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* PESAN & ERROR */}
+                    {(message || error) && (
+                        <div className="mb-4">
+                            {message && <p className="text-green-600 bg-green-100 p-2 rounded text-center text-sm font-semibold">{message}</p>}
+                            {error && <p className="text-red-600 bg-red-100 p-2 rounded text-center text-sm font-semibold">{error}</p>}
                         </div>
                     )}
 
-                    {message && <p className="text-green-600 bg-green-100 p-3 rounded mb-4 text-center font-semibold">{message}</p>}
-                    {error && <p className="text-red-600 bg-red-100 p-3 rounded mb-4 text-center font-semibold">{error}</p>}
-
+                    {/* TOMBOL UTAMA (CHECK-IN / CHECK-OUT) */}
                     <div className="flex space-x-4">
                         <button
                             onClick={handleCheckIn}
-                            className="flex-1 py-3 px-4 bg-green-600 text-white font-semibold rounded-md shadow-sm hover:bg-green-700 transition"
+                            className="flex-1 py-3 px-4 bg-green-600 text-white font-bold rounded shadow hover:bg-green-700 transition"
                         >
-                            Check-In
+                            CHECK-IN
                         </button>
 
                         <button
                             onClick={handleCheckOut}
-                            className="flex-1 py-3 px-4 bg-red-600 text-white font-semibold rounded-md shadow-sm hover:bg-red-700 transition"
+                            className="flex-1 py-3 px-4 bg-red-600 text-white font-bold rounded shadow hover:bg-red-700 transition"
                         >
-                            Check-Out
+                            CHECK-OUT
                         </button>
                     </div>
                 </div>

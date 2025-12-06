@@ -1,6 +1,6 @@
-import React, { useState , useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 
@@ -9,8 +9,11 @@ function ReportPage() {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
+  
   const [selectedLocation, setSelectedLocation] = useState(null);
+  const [selectedImage, setSelectedImage] = useState(null); 
 
+  // ... (Kode icon dan fetchReports tidak berubah) ...
   // Custom pinpoint icon
   const pinpointIcon = new L.Icon({
     iconUrl: 'data:image/svg+xml;charset=utf-8,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"%3E%3Cpath fill="%2346b3d9" d="M16 0C9.4 0 4 5.4 4 12c0 9 12 20 12 20s12-11 12-20c0-6.6-5.4-12-12-12z"/%3E%3Ccircle cx="16" cy="12" r="5" fill="%23ffffff"/%3E%3C/svg%3E',
@@ -33,8 +36,7 @@ function ReportPage() {
         },
       };
 
-      const response = await axios.get('http://localhost:5000/api/reports/daily', config)
-      
+      const response = await axios.get('http://localhost:5000/api/reports/daily', config);
       setReports(response.data.data || []);
     } catch (err) {
       setError(err.response ? err.response.data.message : 'Gagal mengambil laporan');
@@ -44,9 +46,18 @@ function ReportPage() {
   useEffect(() => {
     fetchReports("");
   }, [navigate]);
+
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     fetchReports(searchTerm);
+  };
+
+  // Helper function untuk format URL gambar
+  const getImageUrl = (imagePath) => {
+    if (!imagePath) return null;
+    // Ubah backslash windows (\) jadi slash (/)
+    const cleanPath = imagePath.replace(/\\/g, '/');
+    return `http://localhost:5000/${cleanPath}`;
   };
 
   return (
@@ -55,6 +66,7 @@ function ReportPage() {
         Laporan Presensi Harian
       </h1>
 
+      {/* ... (Form Search dan Error handler tidak berubah) ... */}
       <form onSubmit={handleSearchSubmit} className="mb-6 flex space-x-2">
         <input
           type="text"
@@ -101,6 +113,7 @@ function ReportPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {presensi.user ? presensi.user.nama : "N/A"}
                     </td>
+
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(presensi.checkIn).toLocaleString("id-ID", {
                         timeZone: "Asia/Jakarta",
@@ -113,30 +126,46 @@ function ReportPage() {
                           })
                         : "Belum Check-Out"}
                     </td>
+
+                    {/* --- KOLOM AKSI (MAP & FOTO) --- */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {presensi.latitude && presensi.longitude ? (
-                        <button
-                          onClick={() => setSelectedLocation({
-                            lat: parseFloat(presensi.latitude),
-                            lng: parseFloat(presensi.longitude),
-                            nama: presensi.user?.nama || 'Unknown'
-                          })}
-                          className="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700"
-                        >
-                          Lihat Map
-                        </button>
-                      ) : (
-                        <span className="text-gray-400">-</span>
-                      )}
+                      <div className="flex space-x-2">
+                        {/* 1. TOMBOL LIHAT MAP */}
+                        {presensi.latitude && presensi.longitude ? (
+                          <button
+                            onClick={() => setSelectedLocation({
+                              lat: parseFloat(presensi.latitude),
+                              lng: parseFloat(presensi.longitude),
+                              nama: presensi.user?.nama || 'Unknown'
+                            })}
+                            className="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 transition shadow-sm"
+                          >
+                            Lihat Map 📍
+                          </button>
+                        ) : (
+                          <span className="text-gray-400 text-xs italic px-2">No Map</span>
+                        )}
+
+                        {/* 2. TOMBOL LIHAT FOTO (PERBAIKAN DI SINI) */}
+                        {/* Gunakan presensi.buktiFoto, BUKAN presensi.image */}
+                        {presensi.buktiFoto ? (
+                          <button
+                            onClick={() => setSelectedImage(getImageUrl(presensi.buktiFoto))}
+                            className="px-3 py-1 bg-purple-600 text-white rounded text-xs hover:bg-purple-700 transition shadow-sm"
+                          >
+                            Bukti Foto 📸
+                          </button>
+                        ) : (
+                          <span className="text-gray-400 text-xs italic px-2">No Foto</span>
+                        )}
+                      </div>
                     </td>
+
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td
-                    colSpan="3"
-                    className="px-6 py-4 text-center text-gray-500"
-                  >
+                  <td colSpan="4" className="px-6 py-4 text-center text-gray-500">
                     Tidak ada data yang ditemukan.
                   </td>
                 </tr>
@@ -146,10 +175,10 @@ function ReportPage() {
         </div>
       )}
 
-      {/* Map Modal */}
+      {/* ... (Modal Map tidak berubah) ... */}
       {selectedLocation && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-96">
+          <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full">
             <div className="flex justify-between items-center p-4 border-b">
               <h2 className="text-lg font-semibold text-gray-800">Lokasi Presensi - {selectedLocation.nama}</h2>
               <button
@@ -167,7 +196,7 @@ function ReportPage() {
               >
                 <TileLayer
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+                  attribution='&copy; Osm contributors'
                 />
                 <Marker position={[selectedLocation.lat, selectedLocation.lng]} icon={pinpointIcon}>
                   <Popup>{selectedLocation.nama}</Popup>
@@ -177,6 +206,40 @@ function ReportPage() {
           </div>
         </div>
       )}
+
+      {/* ... (Modal Foto tidak berubah) ... */}
+      {selectedImage && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4"
+          onClick={() => setSelectedImage(null)} 
+        >
+          <div className="relative bg-white p-2 rounded-lg shadow-2xl max-w-4xl max-h-[90vh] overflow-auto">
+            <button
+                onClick={() => setSelectedImage(null)}
+                className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600 z-10"
+              >
+                &times;
+            </button>
+            
+            <img 
+              src={selectedImage} 
+              alt="Bukti Presensi Full" 
+              className="w-full h-auto object-contain rounded"
+              onClick={(e) => e.stopPropagation()} 
+            />
+            
+            <div className="text-center mt-2">
+                 <button 
+                    onClick={() => setSelectedImage(null)}
+                    className="px-4 py-2 bg-gray-800 text-white rounded text-sm hover:bg-gray-700"
+                 >
+                    Tutup
+                 </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

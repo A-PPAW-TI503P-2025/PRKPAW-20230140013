@@ -1,16 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const presensiController = require('../controllers/presensiController');
-const { addUserData } = require('../middleware/permissionMiddleware');
+const { addUserData, authenticateToken } = require('../middleware/permissionMiddleware');
 const { body, validationResult } = require('express-validator');
 
 router.use(addUserData);
-router.post('/check-in', presensiController.CheckIn);
+router.post('/check-in', [authenticateToken, presensiController.upload.single('image')], presensiController.CheckIn);
 router.post('/check-out', presensiController.CheckOut);
 router.get('/today', presensiController.getTodayAttendance);
 router.get('/total', presensiController.getTotalAttendance);
-router.post('/check-in', [authenticateToken, presensiController.upload.single('image')], presensiController.CheckIn);
-
 router.put(
   '/:id',
   [
