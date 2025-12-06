@@ -9,6 +9,7 @@ router.post('/check-in', presensiController.CheckIn);
 router.post('/check-out', presensiController.CheckOut);
 router.get('/today', presensiController.getTodayAttendance);
 router.get('/total', presensiController.getTotalAttendance);
+router.post('/check-in', [authenticateToken, presensiController.upload.single('image')], presensiController.CheckIn);
 
 router.put(
   '/:id',

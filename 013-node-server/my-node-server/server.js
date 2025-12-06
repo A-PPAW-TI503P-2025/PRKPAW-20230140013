@@ -3,6 +3,7 @@ const cors = require('cors');
 const morgan = require("morgan");
 const app = express();
 const PORT = 5000;
+const path = require('path'); 
 
 // Impor router
 const presensiRoutes = require("./routes/presensi");
@@ -12,6 +13,7 @@ const authRoutes = require("./routes/auth");
 app.use(cors());
 app.use(express.json());
 app.use(morgan("dev"));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   next();

@@ -4,12 +4,23 @@ import { useNavigate, Link } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import React, { useState, useRef, useCallback } from 'react';
+import Webcam from 'react-webcam';
+import axios from 'axios';
+
 
 function AttendancePage() {
     const [message, setMessage] = useState("");
     const [error, setError] = useState("");
     const [coords, setCoords] = useState(null);
     const mapRef = useRef(null);
+    const [image, setImage] = useState(null); 
+ 	const webcamRef = useRef(null); 
+ 	const capture = useCallback(() => {
+ 	const imageSrc = webcamRef.current.getScreenshot();
+ 	    setImage(imageSrc); 
+ 	}, [webcamRef]);
+
 
     // Custom pinpoint icon
     const pinpointIcon = new L.Icon({
@@ -62,34 +73,31 @@ function AttendancePage() {
     };
 
     const handleCheckIn = async () => {
-        setMessage("");
-        setError("");
-        if (!coords) {
-            setError("Lokasi belum didapatkan. Mohon izinkan akses lokasi.");
-            return;
-        }
+    if (!coords || !image) {
+      setError("Lokasi dan Foto wajib ada!");
+      return;
+    }
 
-        try {
-            const config = {
-                headers: {
-                    Authorization: `Bearer ${getToken()}`,
-                },
-            };
+    try {
+      const blob = await (await fetch(image)).blob();
 
-            const response = await axios.post(
-                "http://localhost:5000/api/presensi/check-in",
-                {
-                    latitude: coords.lat,
-                    longitude: coords.lng
-                },
-                config
-            );
+      const formData = new FormData();
+      formData.append("latitude", coords.lat);
+      formData.append("longitude", coords.lng);
+      formData.append("image", blob, "selfie.jpg");
 
-            setMessage(response.data.message);
-        } catch (err) {
-            setError(err.response ? err.response.data.message : "Check-in gagal");
-        }
-    };
+      const response = await axios.post(
+        "http://localhost:5000/api/presensi/check-in",
+
+        formData,
+        { headers: { Authorization: `Bearer ${getToken()}` } }
+      );
+
+      setMessage(response.data.message);
+    } catch (err) {
+      setError(err.response ? err.response.data.message : "Check-in gagal");
+    }
+  };
 
     const handleCheckOut = async () => {
         setMessage("");
